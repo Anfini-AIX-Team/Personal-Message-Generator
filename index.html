@@ -128,7 +128,7 @@
   .profile-pane {
     flex: 0 1 auto;
     max-height: 42%;
-    min-height: 52px;
+    min-height: 78px;
     overflow: hidden;
     border-bottom: 2px solid var(--border);
     display: flex;
@@ -277,7 +277,6 @@
 </head>
 <body>
 
-<!-- Auth Modal -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <div class="modal-icon">🔐</div>
@@ -341,14 +340,11 @@
 <script>
 
 // ===== GAS Proxy 設定 =====
-// ここのURLを自分のGASデプロイURLに変更してください
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbydOMU-0h1CpxVDDRgIPzUGU-dc5jt5Ubv_qbDqWNBG8giMxmbWjV33gFqfp_un91iN/exec';
 const APP_ID  = 'index';
 
 let _gasPassword = '';
 
-// ===== POST-based GAS helper =====
-// GETのURL長制限を回避するためPOSTで送信
 function callGAS(params) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -372,7 +368,6 @@ function callGAS(params) {
   });
 }
 
-// ===== パスワード認証 =====
 async function verifyPassword() {
   const pw  = document.getElementById('modalPassword').value;
   const btn = document.getElementById('modalBtn');
@@ -417,13 +412,11 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// ===== Model helper =====
 function getSelectedModel() {
   const sel = document.getElementById('modelSelect');
   return sel ? sel.value : 'gemini-2.5-flash';
 }
 
-// ===== Generate message =====
 async function generateMessage() {
   if (!_gasPassword) {
     setStatus('⚠️ 先にパスワードでログインしてください', '#EF4444');
@@ -447,14 +440,15 @@ async function generateMessage() {
     document.getElementById('messageResult').style.display = 'flex';
     document.getElementById('messageResult').style.flexDirection = 'column';
     document.getElementById('messageResult').style.gap = '10px';
+    
     const pane = document.getElementById('profilePane');
     const body = document.getElementById('profileBody');
     const icon = document.getElementById('profileToggleIcon');
     if (pane && body && icon && icon.classList.contains('open')) {
       body.style.display = 'none';
-      pane.style.maxHeight = '52px';
+      pane.style.maxHeight = '78px';
       icon.classList.remove('open');
-      icon.textContent = '▲';
+      icon.textContent = '▼';
     }
     setStatus('✅ 生成完了', '#10B981');
     setTimeout(() => setStatus('', ''), 3000);
@@ -466,7 +460,6 @@ async function generateMessage() {
   }
 }
 
-// ===== CSV Parser =====
 function parseCSV(text) {
   const lines = [];
   let cur = '', inQ = false;
@@ -499,18 +492,18 @@ function parseCSV(text) {
   });
 }
 
-// ===== Toggle profile panel =====
 function toggleProfile() {
   const pane = document.getElementById('profilePane');
   const body = document.getElementById('profileBody');
   const icon = document.getElementById('profileToggleIcon');
   if (!pane || !body) return;
+  
   const isOpen = icon.classList.contains('open');
   if (isOpen) {
     body.style.display = 'none';
-    pane.style.maxHeight = '52px';
+    pane.style.maxHeight = '78px';
     icon.classList.remove('open');
-    icon.textContent = '▲';
+    icon.textContent = '▼';
   } else {
     body.style.display = '';
     pane.style.maxHeight = '42%';
@@ -519,7 +512,6 @@ function toggleProfile() {
   }
 }
 
-// ===== Build full profile HTML =====
 function buildFullProfile(c) {
   const f = (key) => c[key] && c[key].trim() ? c[key].trim() : null;
   const fi = (key, label, full=false) => {
@@ -575,10 +567,10 @@ function buildFullProfile(c) {
   for (let i = 1; i <= 10; i++) {
     const co = f(`職歴${i}の会社名`); if (!co) continue;
     career += `<div class="field-item full"><span class="fkey">職歴${i}: ${esc(co)}</span></div>`;
-    career += fi(`職歴${i}の期間`, `　期間${i}`);
-    career += fi(`職歴${i}の雇用形態`, `　雇用形態${i}`);
-    career += fi(`職歴${i}の部門・役職`, `　部門・役職${i}`);
-    career += fi(`職歴${i}の職務内容`, `　職務内容${i}`, true);
+    career += fi(`職歴${i}の期間`, ` 期間${i}`);
+    career += fi(`職歴${i}の雇用形態`, ` 雇用形態${i}`);
+    career += fi(`職歴${i}の部門・役職`, ` 部門・役職${i}`);
+    career += fi(`職歴${i}の職務内容`, ` 職務内容${i}`, true);
   }
   if (career) html += section('🏢 職歴', career);
 
@@ -621,7 +613,6 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// ===== Build candidate summary =====
 function buildSummary(c) {
   const parts = [];
   if (c['候補者氏名']) parts.push(`氏名: ${c['候補者氏名']}`);
@@ -654,7 +645,6 @@ function buildSummary(c) {
   return parts.join('\n');
 }
 
-// ===== Build prompt =====
 function buildPrompt(c, customInstruction) {
   const summary = buildSummary(c);
   const name = c['候補者氏名'] || '候補者';
@@ -686,11 +676,9 @@ ${customInstruction}
 上記の候補者に合わせた、パーソナライズされた面談案内メッセージを日本語で作成してください。`;
 }
 
-// ===== State =====
 let candidates = [];
 let selected = null;
 
-// ===== Render list =====
 function renderList() {
   const list = document.getElementById('candidateList');
   document.getElementById('countLabel').textContent = `${candidates.length}名`;
@@ -723,7 +711,6 @@ function renderList() {
   });
 }
 
-// ===== Render right panel =====
 function renderRight() {
   const c = selected;
   if (!c) return;
@@ -731,12 +718,12 @@ function renderRight() {
   const defaultInstruction = `・候補者の大学や専攻、強みに触れる\n・弊社の事業（ITコンサル・新規事業）との親和性を伝える\n・まずはカジュアルな面談を提案する\n・親しみやすいが誠実なトーン`;
 
   panel.innerHTML = `
-    <div class="profile-pane" id="profilePane">
+    <div class="profile-pane" id="profilePane" style="max-height: 78px;">
       <div class="profile-pane-header" onclick="toggleProfile()">
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
             <span>👤 候補者プロフィール</span>
-            <i class="toggle-icon open" id="profileToggleIcon" style="margin-left:auto;flex-shrink:0;">▲</i>
+            <i class="toggle-icon" id="profileToggleIcon" style="margin-left:auto;flex-shrink:0;">▼</i>
           </div>
           <div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px 12px;font-size:12px;font-weight:400;">
             ${c['候補者氏名'] ? `<span style="font-weight:700;color:var(--text-primary);">${esc(c['候補者氏名'])}</span>` : ''}
@@ -747,7 +734,7 @@ function renderRight() {
           </div>
         </div>
       </div>
-      <div class="profile-pane-body" id="profileBody">
+      <div class="profile-pane-body" id="profileBody" style="display: none;">
         ${buildFullProfile(c)}
       </div>
     </div>
@@ -797,7 +784,6 @@ function copyMessage() {
   });
 }
 
-// ===== File upload =====
 const uploadArea = document.getElementById('uploadArea');
 const fileInput  = document.getElementById('fileInput');
 
