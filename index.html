@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>応募者メッセージ自動生成</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap');
 
@@ -46,7 +47,7 @@
   }
 
   header .logo {
-    width: 36px; height: 36px; /* 👈 アイコンサイズを少し大きく拡張 */
+    width: 36px; height: 36px;
     background: var(--accent);
     border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
@@ -54,7 +55,7 @@
   }
   
   header .logo svg {
-    width: 22px; height: 22px; /* 👈 高解像度の明瞭なSVGアイコンのサイズ指定 */
+    width: 22px; height: 22px;
   }
 
   header h1 { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-right: 20px; }
@@ -302,7 +303,6 @@
 </head>
 <body>
 
-<!-- Auth Modal -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <button class="modal-close-btn" onclick="closeAuthModal()" title="閉じる">✕</button>
@@ -315,7 +315,6 @@
   </div>
 </div>
 
-<!-- Prompt Settings Modal -->
 <div class="modal-overlay hidden" id="promptModalOverlay">
   <div class="modal" style="max-width: 500px;">
     <button class="modal-close-btn" onclick="closePromptModal()" title="閉じる">✕</button>
@@ -331,7 +330,6 @@
 </div>
 
 <header>
-  <!-- 👈 ぼやけた絵文字からくっきりとした高解像度のアウトラインSVGアイコンへ変更 -->
   <div class="logo">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <rect width="20" height="16" x="2" y="4" rx="2"/>
@@ -364,13 +362,12 @@
   </div>
 </header>
 
-<!-- 一括生成ビュー（デフォルト） -->
 <div class="layout view-container active" id="viewBulk">
   <div class="left">
     <div class="upload-area" id="uploadAreaBulk">
       <div class="icon">📂</div>
-      <p><strong>CSVファイルをドロップ</strong><br>またはクリックして選択</p>
-      <input type="file" id="fileInputBulk" class="file-input-hidden" accept=".csv">
+      <p><strong>CSV / Excel ファイルをドロップ</strong><br>またはクリックして選択</p>
+      <input type="file" id="fileInputBulk" class="file-input-hidden" accept=".csv, .xlsx">
     </div>
     <div class="list-header">
       <span>候補者一覧</span>
@@ -378,7 +375,7 @@
     </div>
     <div class="candidate-list candidateListClass">
       <div style="padding:24px 16px; color:var(--text-muted); font-size:13px; text-align:center;">
-        CSVをアップロードしてください
+        CSVまたはExcelをアップロードしてください
       </div>
     </div>
   </div>
@@ -399,18 +396,17 @@
       </button>
     </div>
     <div class="bulk-grid" id="bulkGrid">
-      <div style="padding:40px; text-align:center; color:var(--text-muted);">CSVファイルがアップロードされていません</div>
+      <div style="padding:40px; text-align:center; color:var(--text-muted);">ファイルがアップロードされていません</div>
     </div>
   </div>
 </div>
 
-<!-- 個別生成ビュー -->
 <div class="layout view-container" id="viewIndividual">
   <div class="left">
     <div class="upload-area" id="uploadAreaIndividual">
       <div class="icon">📂</div>
-      <p><strong>CSVファイルをドロップ</strong><br>またはクリックして選択</p>
-      <input type="file" id="fileInputIndividual" class="file-input-hidden" accept=".csv">
+      <p><strong>CSV / Excel ファイルをドロップ</strong><br>またはクリックして選択</p>
+      <input type="file" id="fileInputIndividual" class="file-input-hidden" accept=".csv, .xlsx">
     </div>
     <div class="list-header">
       <span>候補者一覧</span>
@@ -418,7 +414,7 @@
     </div>
     <div class="candidate-list candidateListClass">
       <div style="padding:24px 16px; color:var(--text-muted); font-size:13px; text-align:center;">
-        CSVをアップロードしてください
+        CSVまたはExcelをアップロードしてください
       </div>
     </div>
   </div>
@@ -693,7 +689,7 @@ function renderBulkView() {
   const masterBar = document.getElementById('bulkMasterBar');
   
   if (!candidates.length) {
-    grid.innerHTML = '<div style="padding:40px; text-align:center; color:var(--text-muted);">CSVファイルがアップロードされていません。</div>';
+    grid.innerHTML = '<div style="padding:40px; text-align:center; color:var(--text-muted);">ファイルがアップロードされていません。</div>';
     if (masterBar) masterBar.style.display = 'none';
     return;
   }
@@ -774,18 +770,24 @@ function parseCSV(text) {
     return cells;
   };
 
+  if (!lines.length || !lines[0].trim()) return [];
   const headers = parseRow(lines[0].replace(/^\uFEFF/, ''));
   return lines.slice(1).filter(l => l.trim()).map(l => {
     const vals = parseRow(l);
     const obj = {};
     headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
-    obj._customInstruction = '';
-    obj._generatedMessage = '';
-    obj._isGenerating = false;
-    obj._generationModel = '';
-    obj._isChecked = true;
-    return obj;
+    return mapStandardFields(obj);
   });
+}
+
+// 👑 各オブジェクトの基本プロパティを初期化する共通処理
+function mapStandardFields(obj) {
+  obj._customInstruction = '';
+  obj._generatedMessage = '';
+  obj._isGenerating = false;
+  obj._generationModel = '';
+  obj._isChecked = true;
+  return obj;
 }
 
 function renderAllListsAndLabels() {
@@ -835,22 +837,57 @@ function renderAllListsAndLabels() {
   });
 }
 
+// 👑 ファイルの拡張子によって、CSVとExcelのパース処理を分岐させる機構を追加
 function loadFile(file) {
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    candidates = parseCSV(e.target.result);
-    if (candidates.length > 0) {
-      selected = candidates[0];
-    }
-    renderAllListsAndLabels();
-    if (currentView === 'bulk') {
-      renderBulkView();
-    } else {
-      renderRight();
-    }
-  };
-  reader.readAsText(file, 'UTF-8');
+  const fileName = file.name.toLowerCase();
+  
+  if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+    // Excelの読み込み
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        // 最初のアクティブシートを取得
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        // JSON形式に変換 (すべてのセルを文字列として扱う設定)
+        const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: false });
+        
+        candidates = rawRows.map(row => mapStandardFields(row));
+        
+        if (candidates.length > 0) {
+          selected = candidates[0];
+        }
+        finalizeFileLoad();
+      } catch (err) {
+        alert('Excelファイルの解析に失敗しました: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    // 従来のCSV読み込み
+    const reader = new FileReader();
+    reader.onload = e => {
+      candidates = parseCSV(e.target.result);
+      if (candidates.length > 0) {
+        selected = candidates[0];
+      }
+      finalizeFileLoad();
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+}
+
+// 👑 ファイル読み込み完了後の画面更新共通化
+function finalizeFileLoad() {
+  renderAllListsAndLabels();
+  if (currentView === 'bulk') {
+    renderBulkView();
+  } else {
+    renderRight();
+  }
 }
 
 function toggleProfile() {
@@ -874,7 +911,7 @@ function toggleProfile() {
 }
 
 function buildFullProfile(c) {
-  const f = (key) => c[key] && c[key].trim() ? c[key].trim() : null;
+  const f = (key) => c[key] && String(c[key]).trim() ? String(c[key]).trim() : null;
   const fi = (key, label, full=false) => {
     const v = f(key); if (!v) return '';
     return `<div class="field-item${full?' full':''}"><span class="fkey">${label}</span><span class="fval">${esc(v)}</span></div>`;
@@ -985,7 +1022,7 @@ function buildSummary(c) {
   if (c['応募経路']) parts.push(`応募経路: ${c['応募経路']}`);
   if (c['現住所']) parts.push(`現住所: ${c['現住所']}`);
   if (c['語学力']) parts.push(`語学力: ${c['語学力']}`);
-  if (c['TOEIC'] && c['TOEIC'] !== '0') parts.push(`TOEIC: ${c['TOEIC']}`);
+  if (c['TOEIC'] && c['TOEIC'] !== '0' && c['TOEIC'] !== 0) parts.push(`TOEIC: ${c['TOEIC']}`);
 
   for (let i = 1; i <= 3; i++) {
     const co = c[`職歴${i}の会社名`], role = c[`職歴${i}の部門・役職`], period = c[`職歴${i}の期間`];
@@ -993,12 +1030,12 @@ function buildSummary(c) {
   }
 
   if (c['ゼミ・研究（1）所属ゼミ・研究室名']) parts.push(`ゼミ: ${c['ゼミ・研究（1）所属ゼミ・研究室名']}`);
-  if (c['ゼミ・研究（1）研究内容'] && c['ゼミ・研究（1）研究内容'].length < 200)
+  if (c['ゼミ・研究（1）研究内容'] && String(c['ゼミ・研究（1）研究内容']).length < 200)
     parts.push(`研究内容: ${c['ゼミ・研究（1）研究内容']}`);
   if (c['クラブ・サークル（1）団体名/ジャンル']) parts.push(`課外活動: ${c['クラブ・サークル（1）団体名/ジャンル']}`);
 
   const pr = c['その他経験（1）内容'] || c['その他経験（1）タイトル'];
-  if (pr && pr.length < 300) parts.push(`その他経験: ${pr}`);
+  if (pr && String(pr).length < 300) parts.push(`その他経験: ${pr}`);
 
   if (c['希望職種']) parts.push(`希望職種: ${c['希望職種']}`);
   if (c['希望勤務地']) parts.push(`希望勤務地: ${c['希望勤務地']}`);
@@ -1023,7 +1060,7 @@ ${customInstruction}
 
 【出力形式】
 ・宛名（〇〇様）から始める
-・自社の魅力や候補者の経歴への言及を含める
+・自社の魅力や候補者の経歴への言言を含める
 ・面談日程調整のご案内を入れる
 ・300〜400文字程度
 ・丁寧かつ温かみのある文体
@@ -1095,6 +1132,21 @@ function renderRight() {
       </div>
     </div>
   `;
+}
+
+function setStatus(msg, color) {
+  const el = document.getElementById('generateStatus');
+  if (el) { el.textContent = msg; el.style.color = color; }
+}
+
+function copyMessage() {
+  const txt = document.getElementById('messageBox').value;
+  navigator.clipboard.writeText(txt).then(() => {
+    const t = document.getElementById('copyToast');
+    t.textContent = '✅ コピーしました！';
+    t.classList.add('show');
+    setTimeout(() => { t.classList.remove('show'); }, 2000);
+  });
 }
 </script>
 </body>
