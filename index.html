@@ -28,7 +28,8 @@
     font-family: 'Noto Sans JP', 'Inter', sans-serif;
     background: var(--bg);
     color: var(--text-primary);
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     font-size: 14px;
   }
 
@@ -397,23 +398,13 @@
   <div>
     <h1>面談案内メッセージ生成</h1>
   </div>
-  <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+  <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
     <label style="font-size:12px;color:var(--text-muted);white-space:nowrap;">Gemini API キー</label>
     <div style="position:relative;display:flex;align-items:center;">
       <input type="password" id="apiKeyInput" placeholder="AIza..." autocomplete="off"
         style="border:1px solid var(--border);border-radius:8px;padding:7px 36px 7px 10px;font-size:12px;width:220px;outline:none;font-family:inherit;background:var(--bg);color:var(--text-primary);">
       <button onclick="toggleApiKeyVisibility()" id="apiKeyToggle"
         style="position:absolute;right:8px;background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0;line-height:1;display:flex;align-items:center;"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
-    </div>
-    <!-- モデル選択 -->
-    <div style="display:flex;align-items:center;gap:6px;">
-      <label style="font-size:12px;color:var(--text-muted);white-space:nowrap;">モデル</label>
-      <select id="modelSelect"
-        style="border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;outline:none;font-family:inherit;background:var(--bg);color:var(--text-primary);cursor:pointer;max-width:220px;">
-        <option value="gemini-2.5-flash">gemini-2.5-flash（デフォルト）</option>
-      </select>
-      <button onclick="fetchModels()" id="refreshModelsBtn" title="モデル一覧を更新"
-        style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 8px;cursor:pointer;color:var(--text-muted);font-size:13px;line-height:1;display:flex;align-items:center;">🔄</button>
     </div>
     <div id="apiKeyStatus" style="font-size:11px;color:var(--text-muted);white-space:nowrap;"></div>
   </div>
@@ -677,6 +668,7 @@ ${customInstruction}
 ・300〜400文字程度
 ・丁寧かつ温かみのある文体
 ・署名は「採用担当」のみでOK
+・必ずメッセージを最後まで完結させること。途中で終わらないこと。
 
 候補者名: ${name}
 学校: ${school}${dept ? ' ' + dept : ''}
@@ -761,7 +753,7 @@ function renderRight() {
       </div>
 
       <div class="card">
-        <div class="card-header" id="generateCardHeader">✦ Gemini でメッセージ生成</div>
+        <div class="card-header">✦ Gemini でメッセージ生成</div>
         <div class="prompt-section">
           <button class="gemini-btn" onclick="generateMessage()" id="generateBtn" style="width:100%;justify-content:center;font-size:14px;padding:13px;">
             ✦ メッセージを生成する
@@ -788,108 +780,12 @@ function getApiKey() {
   return document.getElementById('apiKeyInput') ? document.getElementById('apiKeyInput').value.trim() : '';
 }
 
-function getSelectedModel() {
-  const sel = document.getElementById('modelSelect');
-  return sel ? sel.value : 'gemini-2.5-flash';
-}
-
 function toggleApiKeyVisibility() {
   const inp = document.getElementById('apiKeyInput');
   const btn = document.getElementById('apiKeyToggle');
   if (inp.type === 'password') { inp.type = 'text'; btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`; }
   else { inp.type = 'password'; btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`; }
 }
-
-// ===== Fetch available Gemini models =====
-async function fetchModels() {
-  const apiKey = getApiKey();
-  const statusEl = document.getElementById('apiKeyStatus');
-  const sel = document.getElementById('modelSelect');
-  const refreshBtn = document.getElementById('refreshModelsBtn');
-
-  if (!apiKey) {
-    statusEl.textContent = '⚠️ APIキーを入力してください';
-    statusEl.style.color = 'var(--text-muted)';
-    return;
-  }
-
-  statusEl.textContent = '🔄 モデル取得中...';
-  statusEl.style.color = 'var(--text-muted)';
-  refreshBtn.disabled = true;
-
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}&pageSize=100`
-    );
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.error?.message || res.status);
-
-    const models = (data.models || [])
-      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
-      .map(m => m.name.replace('models/', ''))
-      .filter(name => name.startsWith('gemini'))
-      .sort((a, b) => {
-        // 新しいモデルを上に：バージョン番号で降順ソート
-        const score = n => {
-          if (n.includes('2.5')) return 4;
-          if (n.includes('2.0')) return 3;
-          if (n.includes('1.5')) return 2;
-          return 1;
-        };
-        const diff = score(b) - score(a);
-        if (diff !== 0) return diff;
-        return a.localeCompare(b);
-      });
-
-    if (!models.length) throw new Error('利用可能なモデルが見つかりません');
-
-    const current = sel.value;
-    sel.innerHTML = models.map(m => {
-      const isDefault = m === 'gemini-2.5-flash';
-      const label = isDefault ? `${m}（推奨）` : m;
-      return `<option value="${m}"${m === current || (isDefault && !models.includes(current)) ? ' selected' : ''}>${label}</option>`;
-    }).join('');
-
-    // カードヘッダーを選択中モデル名で更新
-    updateCardHeader();
-
-    statusEl.textContent = `✅ ${models.length}件のモデルを取得`;
-    statusEl.style.color = '#10B981';
-    setTimeout(() => { statusEl.textContent = ''; }, 3000);
-  } catch (err) {
-    statusEl.textContent = '❌ ' + err.message;
-    statusEl.style.color = '#EF4444';
-  } finally {
-    refreshBtn.disabled = false;
-  }
-}
-
-function updateCardHeader() {
-  const h = document.getElementById('generateCardHeader');
-  if (h) {
-    const model = getSelectedModel();
-    h.textContent = `✦ ${model} でメッセージ生成`;
-  }
-}
-
-// APIキー入力時に自動でモデル取得（debounce）
-let _modelFetchTimer = null;
-document.addEventListener('DOMContentLoaded', () => {
-  const inp = document.getElementById('apiKeyInput');
-  const sel = document.getElementById('modelSelect');
-  if (inp) {
-    inp.addEventListener('input', () => {
-      clearTimeout(_modelFetchTimer);
-      const val = inp.value.trim();
-      if (val.length > 20) {
-        _modelFetchTimer = setTimeout(fetchModels, 800);
-      }
-    });
-  }
-  if (sel) {
-    sel.addEventListener('change', updateCardHeader);
-  }
-});
 
 // ===== Generate message via Gemini API =====
 async function generateMessage() {
@@ -903,23 +799,22 @@ async function generateMessage() {
     return;
   }
 
-  const model = getSelectedModel();
   const instruction = document.getElementById('instructionBox').value;
   const prompt = buildPrompt(selected, instruction);
   const btn = document.getElementById('generateBtn');
   btn.disabled = true;
   btn.textContent = '⏳ 生成中...';
-  setStatus(`${model} に送信中...`, 'var(--text-muted)');
+  setStatus('Gemini に送信中...', 'var(--text-muted)');
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.8, maxOutputTokens: 800 }
+          generationConfig: { temperature: 0.8, maxOutputTokens: 2048 }
         })
       }
     );
