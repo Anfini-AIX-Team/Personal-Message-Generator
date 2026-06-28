@@ -201,6 +201,7 @@
   /* 下段：指示＋生成エリア (残り高さ + スクロール) */
   .action-pane {
     flex: 1 1 0;
+    min-height: 0;
     overflow-y: auto;
     padding: 16px 20px;
     display: flex;
@@ -389,24 +390,55 @@
     min-height: 60px;
     font-family: inherit;
   }
+
+  /* ===== Auth Modal ===== */
+  .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;display:flex;align-items:center;justify-content:center; }
+  .modal-overlay.hidden { display:none; }
+  .modal { background:var(--surface);border-radius:16px;padding:36px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,0.18); }
+  .modal-icon { font-size:32px;margin-bottom:12px; }
+  .modal h2 { font-size:18px;font-weight:700;margin-bottom:6px; }
+  .modal p { font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.6; }
+  .modal input { width:100%;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;font-family:inherit;background:var(--bg);outline:none;margin-bottom:10px; }
+  .modal input:focus { border-color:var(--accent);background:#fff; }
+  .modal .btn-primary { width:100%;padding:12px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer; }
+  .modal .btn-primary:hover { background:#2f5de0; }
+  .modal .btn-primary:disabled { opacity:0.6;cursor:not-allowed; }
+  .modal-status { font-size:12px;text-align:center;min-height:18px;margin-top:10px; }
 </style>
 </head>
 <body>
+
+<!-- Auth Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-icon">🔐</div>
+    <h2>パスワードを入力</h2>
+    <p>管理者から共有されたパスワードを入力してください。<br>認証後、自動でAIが使えるようになります。</p>
+    <input type="password" id="modalPassword" placeholder="パスワードを入力" onkeydown="if(event.key==='Enter')verifyPassword()">
+    <button class="btn-primary" onclick="verifyPassword()" id="modalBtn">🔓 ログイン</button>
+    <div class="modal-status" id="modalStatus"></div>
+  </div>
+</div>
 
 <header>
   <div class="logo">✉</div>
   <div>
     <h1>面談案内メッセージ生成</h1>
   </div>
-  <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
-    <label style="font-size:12px;color:var(--text-muted);white-space:nowrap;">Gemini API キー</label>
-    <div style="position:relative;display:flex;align-items:center;">
-      <input type="password" id="apiKeyInput" placeholder="AIza..." autocomplete="off"
-        style="border:1px solid var(--border);border-radius:8px;padding:7px 36px 7px 10px;font-size:12px;width:220px;outline:none;font-family:inherit;background:var(--bg);color:var(--text-primary);">
-      <button onclick="toggleApiKeyVisibility()" id="apiKeyToggle"
-        style="position:absolute;right:8px;background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0;line-height:1;display:flex;align-items:center;"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
+      <span id="authStatusText" style="color:var(--text-muted);">🔒 未認証</span>
+      <button onclick="showModal()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:var(--text-secondary);">変更</button>
     </div>
-    <div id="apiKeyStatus" style="font-size:11px;color:var(--text-muted);white-space:nowrap;"></div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <label style="font-size:12px;color:var(--text-muted);white-space:nowrap;">モデル</label>
+      <select id="modelSelect" style="border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;outline:none;font-family:inherit;background:var(--bg);color:var(--text-primary);cursor:pointer;">
+        <option value="gemini-2.5-flash">gemini-2.5-flash（推奨）</option>
+        <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+        <option value="gemini-1.5-flash-latest">gemini-1.5-flash-latest</option>
+        <option value="gemini-1.5-pro-latest">gemini-1.5-pro-latest</option>
+      </select>
+    </div>
   </div>
 </header>
 
@@ -443,6 +475,138 @@
 </div>
 
 <script>
+
+// ===== GAS Proxy 設定 =====
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzXjSrthdYAP4VBd3d0v0XnHDXuaamR12zOLrEryMUbTKhYC5OLx87nc5heE8_h7i6X/exec';
+const APP_ID  = 'index';
+
+let _gasPassword = '';
+
+// ===== パスワード認証 =====
+async function verifyPassword() {
+  const pw  = document.getElementById('modalPassword').value;
+  const btn = document.getElementById('modalBtn');
+  if (!pw) { setModalStatus('⚠️ パスワードを入力してください', '#EF4444'); return; }
+  btn.disabled = true; btn.textContent = '🔄 認証中...';
+  setModalStatus('', '');
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw, prompt: '__auth_check__', appId: APP_ID, model: 'gemini-1.5-flash-latest' })
+    });
+    const data = await res.json();
+    if (data.success || data.text !== undefined) {
+      _gasPassword = pw;
+      sessionStorage.setItem('gas_pw', pw);
+      document.getElementById('modalOverlay').classList.add('hidden');
+      document.getElementById('authStatusText').textContent = '✅ 認証済み';
+      document.getElementById('authStatusText').style.color = '#10B981';
+    } else {
+      const msg = data.error || '認証失敗';
+      if (msg.includes('パスワード')) {
+        setModalStatus('❌ パスワードが違います', '#EF4444');
+      } else {
+        _gasPassword = pw;
+        sessionStorage.setItem('gas_pw', pw);
+        document.getElementById('modalOverlay').classList.add('hidden');
+        document.getElementById('authStatusText').textContent = '✅ 認証済み';
+        document.getElementById('authStatusText').style.color = '#10B981';
+      }
+    }
+  } catch(err) {
+    setModalStatus('❌ 接続エラー: GASのURLを確認してください', '#EF4444');
+  } finally {
+    btn.disabled = false; btn.textContent = '🔓 ログイン';
+  }
+}
+
+function showModal() {
+  document.getElementById('modalOverlay').classList.remove('hidden');
+  setTimeout(() => document.getElementById('modalPassword').focus(), 100);
+}
+
+function setModalStatus(msg, color) {
+  const el = document.getElementById('modalStatus');
+  if (el) { el.textContent = msg; el.style.color = color; }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = sessionStorage.getItem('gas_pw');
+  if (saved) {
+    _gasPassword = saved;
+    document.getElementById('modalOverlay').classList.add('hidden');
+    document.getElementById('authStatusText').textContent = '✅ 認証済み';
+    document.getElementById('authStatusText').style.color = '#10B981';
+  }
+});
+
+// ===== Model helpers =====
+function getSelectedModel() {
+  const sel = document.getElementById('modelSelect');
+  return sel ? sel.value : 'gemini-2.5-flash';
+}
+
+async function fetchModels() {
+  // GASプロキシ使用時はモデル取得不要
+}
+
+function updateCardHeader() {
+  const h = document.getElementById('generateCardHeader');
+  if (h) h.textContent = '✦ ' + getSelectedModel() + ' でメッセージ生成';
+}
+
+function getApiKey() { return ''; }
+
+// ===== Generate message via Gemini API (GAS Proxy) =====
+async function generateMessage() {
+  if (!_gasPassword) {
+    setStatus('⚠️ 先にパスワードでログインしてください', '#EF4444');
+    showModal();
+    return;
+  }
+  if (!selected) {
+    setStatus('⚠️ 候補者を選択してください', 'var(--text-muted)');
+    return;
+  }
+  const model = getSelectedModel();
+  const instruction = document.getElementById('instructionBox').value;
+  const prompt = buildPrompt(selected, instruction);
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true; btn.textContent = '⏳ 生成中...';
+  setStatus(model + ' で生成中...', 'var(--text-muted)');
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: _gasPassword, prompt, model, appId: APP_ID })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || '生成失敗');
+    document.getElementById('messageBox').value = data.text;
+    document.getElementById('messageResult').style.display = 'flex';
+    document.getElementById('messageResult').style.flexDirection = 'column';
+    document.getElementById('messageResult').style.gap = '10px';
+    const pane = document.getElementById('profilePane');
+    const body = document.getElementById('profileBody');
+    const icon = document.getElementById('profileToggleIcon');
+    if (pane && body && icon && icon.classList.contains('open')) {
+      body.style.display = 'none';
+      pane.style.maxHeight = '48px';
+      icon.classList.remove('open');
+      icon.textContent = '▲';
+    }
+    setStatus('✅ 生成完了', '#10B981');
+    setTimeout(() => setStatus('', ''), 3000);
+  } catch (err) {
+    setStatus('❌ ' + err.message, '#EF4444');
+    if (err.message.includes('パスワード')) showModal();
+  } finally {
+    btn.disabled = false; btn.textContent = '✦ メッセージを再生成する';
+  }
+}
+
+
 // ===== CSV Parser =====
 function parseCSV(text) {
   const lines = [];
@@ -775,70 +939,9 @@ function renderRight() {
   // instructionBox は generateMessage() 呼び出し時に参照される
 }
 
-// ===== API Key helpers =====
-function getApiKey() {
-  return document.getElementById('apiKeyInput') ? document.getElementById('apiKeyInput').value.trim() : '';
-}
 
-function toggleApiKeyVisibility() {
-  const inp = document.getElementById('apiKeyInput');
-  const btn = document.getElementById('apiKeyToggle');
-  if (inp.type === 'password') { inp.type = 'text'; btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`; }
-  else { inp.type = 'password'; btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`; }
-}
 
-// ===== Generate message via Gemini API =====
-async function generateMessage() {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    setStatus('⚠️ 画面上部にGemini APIキーを入力してください', 'var(--text-muted)');
-    return;
-  }
-  if (!selected) {
-    setStatus('⚠️ 候補者を選択してください', 'var(--text-muted)');
-    return;
-  }
 
-  const instruction = document.getElementById('instructionBox').value;
-  const prompt = buildPrompt(selected, instruction);
-  const btn = document.getElementById('generateBtn');
-  btn.disabled = true;
-  btn.textContent = '⏳ 生成中...';
-  setStatus('Gemini に送信中...', 'var(--text-muted)');
-
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.8, maxOutputTokens: 2048 }
-        })
-      }
-    );
-    const data = await res.json();
-    if (!res.ok) {
-      const msg = data?.error?.message || res.status;
-      throw new Error(msg);
-    }
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!text) throw new Error('レスポンスが空です');
-
-    document.getElementById('messageBox').value = text;
-    document.getElementById('messageResult').style.display = 'flex';
-    document.getElementById('messageResult').style.flexDirection = 'column';
-    document.getElementById('messageResult').style.gap = '10px';
-    setStatus('✅ 生成完了', '#10B981');
-    setTimeout(() => setStatus('', ''), 3000);
-  } catch (err) {
-    setStatus('❌ エラー: ' + err.message, '#EF4444');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '✦ メッセージを再生成する';
-  }
-}
 
 function setStatus(msg, color) {
   const el = document.getElementById('generateStatus');
