@@ -53,16 +53,8 @@
     color: white; font-size: 16px;
   }
 
-  header h1 {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  header span {
-    font-size: 12px;
-    color: var(--text-muted);
-  }
+  header h1 { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+  header span { font-size: 12px; color: var(--text-muted); }
 
   .layout {
     display: grid;
@@ -71,7 +63,6 @@
     overflow: hidden;
   }
 
-  /* ===== LEFT PANEL ===== */
   .left {
     background: var(--surface);
     border-right: 1px solid var(--border);
@@ -114,10 +105,7 @@
     align-items: center;
   }
 
-  .candidate-list {
-    flex: 1;
-    overflow-y: auto;
-  }
+  .candidate-list { flex: 1; overflow-y: auto; }
 
   .candidate-item {
     padding: 12px 16px;
@@ -128,42 +116,14 @@
 
   .candidate-item:hover { background: var(--bg); }
   .candidate-item.active { background: var(--accent-light); border-left: 3px solid var(--accent); }
+  .candidate-item .name { font-weight: 600; font-size: 14px; color: var(--text-primary); }
+  .candidate-item .meta { font-size: 12px; color: var(--text-secondary); margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; }
 
-  .candidate-item .name {
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--text-primary);
-  }
-
-  .candidate-item .meta {
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin-top: 3px;
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .badge {
-    display: inline-block;
-    padding: 1px 7px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 500;
-    background: var(--tag-bg);
-    color: var(--text-secondary);
-  }
-
+  .badge { display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 11px; font-weight: 500; background: var(--tag-bg); color: var(--text-secondary); }
   .badge.scout { background: #FEF3C7; color: #92400E; }
   .badge.self { background: #DCFCE7; color: #166534; }
 
-  /* ===== RIGHT PANEL ===== */
-  .right {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow: hidden;
-  }
+  .right { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 
   .profile-pane {
     flex: 0 0 auto;
@@ -191,11 +151,7 @@
   }
 
   .profile-pane-header:hover { background: var(--bg); }
-
-  .profile-pane-body {
-    overflow-y: auto;
-    flex: 1;
-  }
+  .profile-pane-body { overflow-y: auto; flex: 1; }
 
   .action-pane {
     flex: 1 1 0;
@@ -220,12 +176,7 @@
 
   .empty-state .icon { font-size: 40px; }
 
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-  }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
 
   .card-header {
     padding: 12px 16px;
@@ -241,10 +192,7 @@
   .toggle-icon { transition: transform 0.2s; font-style: normal; font-size: 11px; color: var(--text-muted); }
   .toggle-icon.open { transform: rotate(180deg); }
 
-  .profile-section {
-    padding: 12px 18px 16px;
-    border-bottom: 1px solid var(--border);
-  }
+  .profile-section { padding: 12px 18px 16px; border-bottom: 1px solid var(--border); }
   .profile-section:last-child { border-bottom: none; }
 
   .section-title {
@@ -258,40 +206,14 @@
     border-bottom: 1px solid var(--accent-light);
   }
 
-  .field-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px 16px;
-  }
-
+  .field-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 16px; }
   .field-item { display: flex; flex-direction: column; gap: 2px; }
   .field-item.full { grid-column: 1 / -1; }
+  .field-item .fkey { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+  .field-item .fval { font-size: 12px; color: var(--text-primary); white-space: pre-wrap; line-height: 1.5; }
 
-  .field-item .fkey {
-    font-size: 10px;
-    color: var(--text-muted);
-    font-weight: 600;
-  }
-
-  .field-item .fval {
-    font-size: 12px;
-    color: var(--text-primary);
-    white-space: pre-wrap;
-    line-height: 1.5;
-  }
-
-  .prompt-section {
-    padding: 16px 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .prompt-section label {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-secondary);
-  }
+  .prompt-section { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .prompt-section label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
 
   textarea {
     width: 100%;
@@ -310,35 +232,12 @@
 
   textarea:focus { border-color: var(--accent); background: #fff; }
 
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    border: none;
-    transition: all 0.15s;
-  }
-
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
   .btn-primary { background: var(--accent); color: white; }
   .btn-primary:hover { background: #2f5de0; }
-
-  .btn-secondary {
-    background: var(--bg);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
-  }
+  .btn-secondary { background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); }
   .btn-secondary:hover { background: var(--border); }
-
-  .btn-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
+  .btn-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
   .gemini-btn {
     background: linear-gradient(135deg, #4285F4, #34A853);
@@ -357,26 +256,8 @@
   }
   .gemini-btn:hover { opacity: 0.88; }
 
-  .copy-toast {
-    font-size: 12px;
-    color: var(--success);
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
+  .copy-toast { font-size: 12px; color: var(--success); opacity: 0; transition: opacity 0.3s; }
   .copy-toast.show { opacity: 1; }
-
-  .message-preview {
-    padding: 16px 18px;
-    white-space: pre-wrap;
-    font-size: 13px;
-    line-height: 1.8;
-    color: var(--text-primary);
-    background: var(--bg);
-    border-radius: 6px;
-    margin: 0 18px 16px;
-    min-height: 60px;
-    font-family: inherit;
-  }
 
   /* ===== Auth Modal ===== */
   .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;display:flex;align-items:center;justify-content:center; }
@@ -409,9 +290,7 @@
 
 <header>
   <div class="logo">✉</div>
-  <div>
-    <h1>面談案内メッセージ生成</h1>
-  </div>
+  <div><h1>面談案内メッセージ生成</h1></div>
   <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
     <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
       <span id="authStatusText" style="color:var(--text-muted);">🔒 未認証</span>
@@ -430,14 +309,12 @@
 </header>
 
 <div class="layout">
-  <!-- LEFT -->
   <div class="left">
     <div class="upload-area" id="uploadArea">
       <div class="icon">📂</div>
       <p><strong>CSVファイルをドロップ</strong><br>またはクリックして選択</p>
       <input type="file" id="fileInput" accept=".csv">
     </div>
-
     <div class="list-header">
       <span>候補者一覧</span>
       <span id="countLabel" style="color:var(--text-muted)"></span>
@@ -449,7 +326,6 @@
     </div>
   </div>
 
-  <!-- RIGHT -->
   <div class="right" id="rightPanel">
     <div class="empty-state" style="height:100%;justify-content:center;">
       <div class="icon">👈</div>
@@ -464,37 +340,34 @@
 <script>
 
 // ===== GAS Proxy 設定 =====
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwaWxG1U2-cA4N3H-xe9cceY0WXqqEJsJxmcoT2X3GmkWpYb9Eac3czUjeKbHCmj4Az/exec';
+// ここのURLを自分のGASデプロイURLに変更してください
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbydOMU-0h1CpxVDDRgIPzUGU-dc5jt5Ubv_qbDqWNBG8giMxmbWjV33gFqfp_un91iN/exec';
 const APP_ID  = 'index';
 
 let _gasPassword = '';
 
-// ===== JSONP helper =====
+// ===== POST-based GAS helper =====
+// GETのURL長制限を回避するためPOSTで送信
 function callGAS(params) {
   return new Promise((resolve, reject) => {
-    const cbName = 'gasCallback_' + Date.now();
-    const url = GAS_URL + '?' + Object.entries({...params, callback: cbName})
-      .map(([k,v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v)).join('&');
-    const script = document.createElement('script');
     const timer = setTimeout(() => {
-      delete window[cbName];
-      document.body.removeChild(script);
       reject(new Error('タイムアウト：GASに接続できませんでした'));
     }, 15000);
-    window[cbName] = (data) => {
+
+    fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(params)
+    })
+    .then(r => r.json())
+    .then(data => {
       clearTimeout(timer);
-      delete window[cbName];
-      document.body.removeChild(script);
       resolve(data);
-    };
-    script.src = url;
-    script.onerror = () => {
+    })
+    .catch(err => {
       clearTimeout(timer);
-      delete window[cbName];
-      document.body.removeChild(script);
       reject(new Error('GASへの接続に失敗しました'));
-    };
-    document.body.appendChild(script);
+    });
   });
 }
 
@@ -543,13 +416,13 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// ===== Model helpers =====
+// ===== Model helper =====
 function getSelectedModel() {
   const sel = document.getElementById('modelSelect');
   return sel ? sel.value : 'gemini-2.5-flash';
 }
 
-// ===== Generate message via Gemini API (GAS Proxy) =====
+// ===== Generate message =====
 async function generateMessage() {
   if (!_gasPassword) {
     setStatus('⚠️ 先にパスワードでログインしてください', '#EF4444');
@@ -925,11 +798,10 @@ function copyMessage() {
 
 // ===== File upload =====
 const uploadArea = document.getElementById('uploadArea');
-const fileInput = document.getElementById('fileInput');
+const fileInput  = document.getElementById('fileInput');
 
 uploadArea.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
-
 uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('drag'); });
 uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag'));
 uploadArea.addEventListener('drop', e => {
