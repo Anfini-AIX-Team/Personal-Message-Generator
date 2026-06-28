@@ -128,7 +128,7 @@
   .profile-pane {
     flex: 0 1 auto;
     max-height: 42%;
-    min-height: 48px;
+    min-height: 52px;
     overflow: hidden;
     border-bottom: 2px solid var(--border);
     display: flex;
@@ -452,7 +452,7 @@ async function generateMessage() {
     const icon = document.getElementById('profileToggleIcon');
     if (pane && body && icon && icon.classList.contains('open')) {
       body.style.display = 'none';
-      pane.style.maxHeight = '48px';
+      pane.style.maxHeight = '52px';
       icon.classList.remove('open');
       icon.textContent = '▲';
     }
@@ -508,7 +508,7 @@ function toggleProfile() {
   const isOpen = icon.classList.contains('open');
   if (isOpen) {
     body.style.display = 'none';
-    pane.style.maxHeight = '48px';
+    pane.style.maxHeight = '52px';
     icon.classList.remove('open');
     icon.textContent = '▲';
   } else {
