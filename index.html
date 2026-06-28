@@ -126,9 +126,7 @@
   .right { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 
   .profile-pane {
-    flex: 0 1 auto;
-    max-height: 42%;
-    min-height: 78px;
+    flex-shrink: 0;
     overflow: hidden;
     border-bottom: 2px solid var(--border);
     display: flex;
@@ -138,21 +136,21 @@
 
   .profile-pane-header {
     flex-shrink: 0;
-    padding: 10px 18px;
+    padding: 12px 18px;
     font-weight: 600;
     font-size: 13px;
     color: var(--text-secondary);
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     cursor: pointer;
     user-select: none;
-    border-bottom: 1px solid var(--border);
     background: var(--surface);
+    height: 48px;
   }
 
   .profile-pane-header:hover { background: var(--bg); }
-  .profile-pane-body { overflow-y: auto; flex: 1; }
+  .profile-pane-body { overflow-y: auto; flex: 1; max-height: 280px; }
 
   .action-pane {
     flex: 1 1 0;
@@ -446,7 +444,7 @@ async function generateMessage() {
     const icon = document.getElementById('profileToggleIcon');
     if (pane && body && icon && icon.classList.contains('open')) {
       body.style.display = 'none';
-      pane.style.maxHeight = '78px';
+      pane.style.height = '48px';
       icon.classList.remove('open');
       icon.textContent = '▼';
     }
@@ -501,12 +499,12 @@ function toggleProfile() {
   const isOpen = icon.classList.contains('open');
   if (isOpen) {
     body.style.display = 'none';
-    pane.style.maxHeight = '78px';
+    pane.style.height = '48px';
     icon.classList.remove('open');
     icon.textContent = '▼';
   } else {
     body.style.display = '';
-    pane.style.maxHeight = '42%';
+    pane.style.height = 'auto';
     icon.classList.add('open');
     icon.textContent = '▲';
   }
@@ -718,21 +716,15 @@ function renderRight() {
   const defaultInstruction = `・候補者の大学や専攻、強みに触れる\n・弊社の事業（ITコンサル・新規事業）との親和性を伝える\n・まずはカジュアルな面談を提案する\n・親しみやすいが誠実なトーン`;
 
   panel.innerHTML = `
-    <div class="profile-pane" id="profilePane" style="max-height: 78px;">
+    <div class="profile-pane" id="profilePane" style="height: 48px;">
       <div class="profile-pane-header" onclick="toggleProfile()">
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
-            <span>👤 候補者プロフィール</span>
-            <i class="toggle-icon" id="profileToggleIcon" style="margin-left:auto;flex-shrink:0;">▼</i>
-          </div>
-          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px 12px;font-size:12px;font-weight:400;">
-            ${c['候補者氏名'] ? `<span style="font-weight:700;color:var(--text-primary);">${esc(c['候補者氏名'])}</span>` : ''}
-            ${c['年齢'] ? `<span style="color:var(--text-secondary);">${esc(c['年齢'])}</span>` : ''}
-            ${c['応募経路'] ? `<span class="badge ${c['応募経路']==='スカウト'?'scout':'self'}">${esc(c['応募経路'])}</span>` : ''}
-            ${c['学歴1 学校名'] ? `<span style="color:var(--text-secondary);">🎓 ${esc(c['学歴1 学校名'])}${c['学歴1 学部・学科'] ? ' ' + esc(c['学歴1 学部・学科']) : ''}</span>` : ''}
-            ${c['応募職種'] ? `<span style="color:var(--text-secondary);">💼 ${esc(c['応募職種'])}</span>` : ''}
-          </div>
+        <div style="flex:1; min-width:0; display:flex; align-items:center; gap:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+          ${c['候補者氏名'] ? `<span style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-right: 4px; flex-shrink: 0;">${esc(c['候補者氏名'])}</span>` : ''}
+          ${c['年齢'] ? `<span style="color:var(--text-secondary); flex-shrink: 0;">${esc(c['年齢'])}</span>` : ''}
+          ${c['応募経路'] ? `<span class="badge ${c['応募経路']==='スカウト'?'scout':'self'}" style="flex-shrink: 0;">${esc(c['応募経路'])}</span>` : ''}
+          ${c['学歴1 学校名'] ? `<span style="color:var(--text-secondary); overflow:hidden; text-overflow:ellipsis;">🎓 ${esc(c['学歴1 学校名'])}${c['学歴1 学部・学科'] ? ' ' + esc(c['学歴1 学部・学科']) : ''}</span>` : ''}
         </div>
+        <i class="toggle-icon" id="profileToggleIcon" style="margin-left:auto; flex-shrink:0;">▼</i>
       </div>
       <div class="profile-pane-body" id="profileBody" style="display: none;">
         ${buildFullProfile(c)}
