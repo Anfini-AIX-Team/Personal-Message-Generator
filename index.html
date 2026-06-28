@@ -477,10 +477,39 @@
 <script>
 
 // ===== GAS Proxy 設定 =====
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyJi2EWNnaTQUQN244tMkY80kYdULHJlVrprKzAlxe3Bkt_hS-lMlT0EnVSOHVCz28-/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxSK0HH7mh6IzrO7er5GgH8RgQBfgU8epua5mZe0grOTlil-JDuM9H8mw2jP2_1ecGo/exec';
 const APP_ID  = 'index';
 
 let _gasPassword = '';
+
+// ===== JSONP helper =====
+function callGAS(params) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'gasCallback_' + Date.now();
+    const url = GAS_URL + '?' + Object.entries({...params, callback: cbName})
+      .map(([k,v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v)).join('&');
+    const script = document.createElement('script');
+    const timer = setTimeout(() => {
+      delete window[cbName];
+      document.body.removeChild(script);
+      reject(new Error('タイムアウト：GASに接続できませんでした'));
+    }, 15000);
+    window[cbName] = (data) => {
+      clearTimeout(timer);
+      delete window[cbName];
+      document.body.removeChild(script);
+      resolve(data);
+    };
+    script.src = url;
+    script.onerror = () => {
+      clearTimeout(timer);
+      delete window[cbName];
+      document.body.removeChild(script);
+      reject(new Error('GASへの接続に失敗しました'));
+    };
+    document.body.appendChild(script);
+  });
+}
 
 // ===== パスワード認証 =====
 async function verifyPassword() {
@@ -490,32 +519,18 @@ async function verifyPassword() {
   btn.disabled = true; btn.textContent = '🔄 認証中...';
   setModalStatus('', '');
   try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pw, prompt: '__auth_check__', appId: APP_ID, model: 'gemini-1.5-flash-latest' })
-    });
-    const data = await res.json();
-    if (data.success || data.text !== undefined) {
+    const data = await callGAS({ password: pw, prompt: '__auth_check__', appId: APP_ID, model: 'gemini-1.5-flash-latest' });
+    if (data.success) {
       _gasPassword = pw;
       sessionStorage.setItem('gas_pw', pw);
       document.getElementById('modalOverlay').classList.add('hidden');
       document.getElementById('authStatusText').textContent = '✅ 認証済み';
       document.getElementById('authStatusText').style.color = '#10B981';
     } else {
-      const msg = data.error || '認証失敗';
-      if (msg.includes('パスワード')) {
-        setModalStatus('❌ パスワードが違います', '#EF4444');
-      } else {
-        _gasPassword = pw;
-        sessionStorage.setItem('gas_pw', pw);
-        document.getElementById('modalOverlay').classList.add('hidden');
-        document.getElementById('authStatusText').textContent = '✅ 認証済み';
-        document.getElementById('authStatusText').style.color = '#10B981';
-      }
+      setModalStatus('❌ ' + (data.error || 'パスワードが違います'), '#EF4444');
     }
   } catch(err) {
-    setModalStatus('❌ 接続エラー: GASのURLを確認してください', '#EF4444');
+    setModalStatus('❌ ' + err.message, '#EF4444');
   } finally {
     btn.disabled = false; btn.textContent = '🔓 ログイン';
   }
@@ -576,12 +591,7 @@ async function generateMessage() {
   btn.disabled = true; btn.textContent = '⏳ 生成中...';
   setStatus(model + ' で生成中...', 'var(--text-muted)');
   try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: _gasPassword, prompt, model, appId: APP_ID })
-    });
-    const data = await res.json();
+    const data = await callGAS({ password: _gasPassword, prompt, model, appId: APP_ID });
     if (!data.success) throw new Error(data.error || '生成失敗');
     document.getElementById('messageBox').value = data.text;
     document.getElementById('messageResult').style.display = 'flex';
