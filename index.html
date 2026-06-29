@@ -432,7 +432,7 @@
 <script>
 
 // ===== GAS Proxy 設定 =====
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbydOMU-0h1CpxVDDRgIPzUGU-dc5jt5Ubv_qbDqWNBG8giMxmbWjV33gFqfp_un91iN/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbw-xN2xA7R_O_QcV6CRo614VqEJQxcXNLqfJUJgeHKp7lPHs9qV7faTdcY1nEu3OA6M/exec';
 const APP_ID  = 'index';
 
 let _gasPassword = '';
@@ -480,9 +480,10 @@ function saveDefaultInstruction() {
 
 function callGAS(params) {
   return new Promise((resolve, reject) => {
+    // 👑 タイムアウト制限を15秒から60秒（60000ms）に延長
     const timer = setTimeout(() => {
-      reject(new Error('タイムアウト：GASに接続できませんでした'));
-    }, 15000);
+      reject(new Error('タイムアウト：GASからの応答が時間内に返ってきませんでした（60秒経過）'));
+    }, 60000);
 
     fetch(GAS_URL, {
       method: 'POST',
@@ -593,7 +594,7 @@ async function executeIndividualTask(targetCandidate, model) {
   if (currentView === 'bulk') renderBulkView();
   
   const baseInstruction = targetCandidate._customInstruction.trim() !== '' ? targetCandidate._customInstruction : getDefaultInstruction();
-  const finalInstruction = `${baseInstruction}\n\n[システム最高絶対命令: 生成する案内メッセージは、文字数制限に配慮しながら必ず文章の最後（署名や挨拶文、締めの言葉など）まで完璧に書ききってください。途中のセンテンスや中途半端な改行で出力を終了させることは厳禁とします。必ず1つの完結したメッセージとして出力してください。]`;
+  const finalInstruction = `${baseInstruction}\n\n[最優先絶対遵守ルール: 文字数制限を最優先に配慮しながら、文章の最後（指定フォーマットの末尾）まで完璧に出力しきってください。途中で切ることは厳禁です。1つの完結したメッセージとして出力してください。]`;
   
   const prompt = buildPrompt(targetCandidate, finalInstruction);
   
@@ -780,7 +781,6 @@ function parseCSV(text) {
   });
 }
 
-// 👑 各オブジェクトの基本プロパティを初期化する共通処理
 function mapStandardFields(obj) {
   obj._customInstruction = '';
   obj._generatedMessage = '';
@@ -837,22 +837,18 @@ function renderAllListsAndLabels() {
   });
 }
 
-// 👑 ファイルの拡張子によって、CSVとExcelのパース処理を分岐させる機構を追加
 function loadFile(file) {
   if (!file) return;
   const fileName = file.name.toLowerCase();
   
   if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-    // Excelの読み込み
     const reader = new FileReader();
     reader.onload = e => {
       try {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
-        // 最初のアクティブシートを取得
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        // JSON形式に変換 (すべてのセルを文字列として扱う設定)
         const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: false });
         
         candidates = rawRows.map(row => mapStandardFields(row));
@@ -867,7 +863,6 @@ function loadFile(file) {
     };
     reader.readAsArrayBuffer(file);
   } else {
-    // 従来のCSV読み込み
     const reader = new FileReader();
     reader.onload = e => {
       candidates = parseCSV(e.target.result);
@@ -880,7 +875,6 @@ function loadFile(file) {
   }
 }
 
-// 👑 ファイル読み込み完了後の画面更新共通化
 function finalizeFileLoad() {
   renderAllListsAndLabels();
   if (currentView === 'bulk') {
@@ -1034,7 +1028,7 @@ function buildSummary(c) {
     parts.push(`研究内容: ${c['ゼミ・研究（1）研究内容']}`);
   if (c['クラブ・サークル（1）団体名/ジャンル']) parts.push(`課外活動: ${c['クラブ・サークル（1）団体名/ジャンル']}`);
 
-  const pr = c['その他経験（1）内容'] || c['その他経験（1）タイトル'];
+  const pr = c['other経験（1）内容'] || c['その他経験（1）内容'] || c['その他経験（1）タイトル'];
   if (pr && String(pr).length < 300) parts.push(`その他経験: ${pr}`);
 
   if (c['希望職種']) parts.push(`希望職種: ${c['希望職種']}`);
@@ -1045,30 +1039,26 @@ function buildSummary(c) {
 
 function buildPrompt(c, customInstruction) {
   const summary = buildSummary(c);
-  const name = c['候補者氏名'] || '候補者';
-  const school = c['学歴1 学校名'] || '';
-  const dept = c['学歴1 学部・学科'] || '';
-  const route = c['応募経路'] || '';
+  const name = c['候補者氏名_姓'] || c['候補者氏名'] || '候補者';
 
-  return `あなたはAnfiniの採用担当者です。以下の候補者情報をもとに、採用サイト経由での応募に対する返信メッセージを作成してください。
+  // 👑 プロンプトを論理構造化し、AIが迷わず【基本フォーマット】を埋めて完結できるように変更
+  return `あなたはAnfiniの採用担当者です。以下の候補者情報をもとに、採用サイト経由での応募に対する返信メッセージを日本語で作成してください。
 
 【候補者情報】
 ${summary}
 
-【メッセージ作成の要件】
+【メッセージ作成の追加要件】
 ${customInstruction}
 
-【ルール】
-・AnfiniのValue（下記）と紐づけること
-・Valueは下記から2〜3つ適切に選ぶこと
-・文章はビジネス寄りで自然なトーン
-・200-300字程度
-・構成と文章量は必ず固定
-・エピソード部分は必ず“一文”に要約する
-・学生の本質的な強みを抽象化し、Valueと自然に接続する
-・必ずメッセージを最後まで完結させ、途中で終わらない
+【満たすべき厳格なルール】
+1. 提示された「使用可能なValue一覧」の中から、候補者の強みや経験に最も合致するものを【2〜3つ】厳選して抽出すること。
+2. 候補者の具体的なエピソード（学生時代の経験・活動や前職での成果など）を特定し、必ず【一文（1つのセンテンス）】に凝縮して要約すること。
+3. 候補者の本質的な強みを客観的に抽象化し、ステップ1で選んだValueへと自然に接続すること。
+4. 全体のトーン＆マナーは、ビジネスシーンに適した、誠実かつ自然な文体とすること。
+5. 文字数制限：全体で【200文字〜300文字以内】に必ず収め、簡潔で洗練されたメッセージにすること。不要な導入や長すぎる前置きは排除すること。
+6. 絶対命令：途中で途切れず、必ず3行目の「〜ぜひ一度お話ししたいと思っています。」という結びの言葉まで完全に書ききって出力を終了すること。
 
-〈使用するValue〉
+〈使用可能なValue一覧〉
 ・己に向き合い人を想う
 ・常にワクワク・ドキドキできるような大胆な夢を描く
 ・建前のようなロジックはいらない、ハートで語り合おう
@@ -1078,16 +1068,17 @@ ${customInstruction}
 ・言葉を丁寧に扱い、価値観を共有しよう
 ・過程や細部にこだわろう必然の結果
 
-【出力フォーマット（基本）】
-XXは、AnfiniのValueとも重なるものがあると思い、ご連絡いたしました。
-XXX。（学生エピソードを必ず1文で要約）
-XXXを持つあなたと、ぜひ一度お話ししたいと思っています。
+【出力フォーマット】
+以下の構成（3つのパーツ）のみを忠実に出力してください。余計な解説文、挨拶、重複した宛名は一切出力しないでください。
 
-候補者名: ${name}
-学校: ${school}${dept ? ' ' + dept : ''}
-応募経路: ${route}
+[1行目：Valueとの紐付け（XXに厳選したValueを挿入）]
+${name}様の〇〇という強み（または経験）は、AnfiniのValueである「XX」や「XX」とも重なるものがあると思い、ご連絡いたしました。
 
-上記の候補者に合わせた、パーソナライズされたメッセージを日本語で作成してください。`;
+[2行目：エピソードの1文要約（学生エピソードを必ず1文で要約）]
+（ここに候補者の経験や活動を必ず1文で要約した文章を記述）
+
+[3行目：強みの抽象化と結び]
+（ここに抽象化した強みを記述）を持つあなたと、ぜひ一度お話ししたいと思っています。`;
 }
 
 function renderRight() {
