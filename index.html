@@ -436,6 +436,7 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbw-xN2xA7R_O_QcV6CRo614
 const APP_ID  = 'index';
 
 let _gasPassword = '';
+const SYSTEM_DEFAULT_INSTRUCTION = `・候補者の大学や専攻、強みに触れる\n・弊社の事業（ITコンサル・新規事業）との親和性を伝える\n・まずはカジュアルな面談を提案する\n・親しみやすいが誠実なトーン`;
 
 let candidates = [];
 let selected = null;
@@ -456,10 +457,13 @@ function switchView(view) {
   }
 }
 
-
+function getDefaultInstruction() {
+  const saved = localStorage.getItem('default_instruction');
+  return saved !== null ? saved : SYSTEM_DEFAULT_INSTRUCTION;
+}
 
 function showPromptModal() {
-  document.getElementById('modalInstructionSetting').value = localStorage.getItem('default_instruction') || '';
+  document.getElementById('modalInstructionSetting').value = getDefaultInstruction();
   document.getElementById('promptModalOverlay').classList.remove('hidden');
 }
 
@@ -596,10 +600,8 @@ async function executeIndividualTask(targetCandidate, model) {
   
   if (currentView === 'bulk') renderBulkView();
   
-  const baseInstruction = targetCandidate._customInstruction.trim();
-  const finalInstruction = baseInstruction
-    ? `${baseInstruction}\n\n[最優先絶対遵守ルール: 文字数制限を最優先に配慮しながら、文章の最後（指定フォーマットの末尾）まで完璧に出力しきってください。途中で切ることは厳禁です。1つの完結したメッセージとして出力してください。]`
-    : `[最優先絶対遵守ルール: 文字数制限を最優先に配慮しながら、文章の最後（指定フォーマットの末尾）まで完璧に出力しきってください。途中で切ることは厳禁です。1つの完結したメッセージとして出力してください。]`;
+  const baseInstruction = targetCandidate._customInstruction.trim() !== '' ? targetCandidate._customInstruction : getDefaultInstruction();
+  const finalInstruction = `${baseInstruction}\n\n[最優先絶対遵守ルール: 文字数制限を最優先に配慮しながら、文章の最後（指定フォーマットの末尾）まで完璧に出力しきってください。途中で切ることは厳禁です。1つの完結したメッセージとして出力してください。]`;
   
   const prompt = buildPrompt(targetCandidate, finalInstruction);
   
@@ -1053,7 +1055,7 @@ function buildPrompt(c, customInstruction) {
 ${summary}
 
 【メッセージ作成の追加要件】
-${customInstruction || '（なし）'}
+${customInstruction}
 
 【満たすべき厳格なルール】
 1. 提示された「使用可能なValue一覧」の中から、候補者の強みや経験に最も合致するものを【2〜3つ】厳選して抽出すること。
@@ -1120,7 +1122,7 @@ function renderRight() {
         <div class="card-header">🎯 メッセージ生成指示</div>
         <div class="prompt-section">
           <label>カスタム指示（入力がない場合は設定されたプロンプトがベースになります）</label>
-          <textarea id="instructionBox" rows="4" placeholder="個別の追加指示があれば入力してください（空欄の場合は③のルールのみで生成されます）" oninput="saveCurrentInputState()">${esc(currentInstruction)}</textarea>
+          <textarea id="instructionBox" rows="4" placeholder="特定の要件や個別の指示を追加したい場合に入力してください（空欄でもOKです）" oninput="saveCurrentInputState()">${esc(currentInstruction)}</textarea>
         </div>
       </div>
 
